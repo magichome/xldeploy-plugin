@@ -280,6 +280,28 @@ public class Credential extends AbstractDescribableImpl<Credential> {
             return new StandardUsernameListBoxModel().withAll(creds);
         }
 
+        public FormValidation doValidateCredential(@QueryParameter String deployitServerUrl, @QueryParameter String deployitClientProxyUrl, @QueryParameter String secondaryServerUrl, @QueryParameter String secondaryProxyUrl, @QueryParameter String credentialsId) throws IOException {
+            try {
+                String serverUrl = Strings.isNullOrEmpty(secondaryServerUrl) ? deployitServerUrl : secondaryServerUrl;
+                String proxyUrl = Strings.isNullOrEmpty(secondaryProxyUrl) ? deployitClientProxyUrl : secondaryProxyUrl;
+                 if (Strings.isNullOrEmpty(credentialsId)) {
+                    return FormValidation.error("No credentials specified");
+                }
+                StandardUsernamePasswordCredentials credentials = lookupSystemCredentials(credentialsId, Jenkins.getInstance());
+                if (credentials == null) {
+                    return FormValidation.error(String.format("Could not find credential with id '%s'", credentialsId));
+                }
+                if (Strings.isNullOrEmpty(serverUrl)) {
+                    return FormValidation.error("No server URL specified");
+                }
+                 return validateConnection(serverUrl, proxyUrl, credentials.getUsername(), credentials.getPassword().getPlainText());
+            } catch (IllegalStateException e) {
+                return FormValidation.error(e.getMessage());
+            } catch (Exception e) {
+                return FormValidation.error("XL Deploy configuration is not valid! %s", e.getMessage());
+            }
+        }
+
         private FormValidation validateOptionalUrl(String url) {
             try {
                 if (!Strings.isNullOrEmpty(url)) {
